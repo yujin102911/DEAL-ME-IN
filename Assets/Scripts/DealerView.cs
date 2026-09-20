@@ -8,12 +8,15 @@ namespace NumberTable
         private int justRevealed=-1;
         public void PickDealerCard(int index)
         {
+            if(IsPresenting)return;
             if(Run.RevealOffer(index)){justRevealed=index;Play(cardSound);LastAction="reveal";Render();}
         }
         public void UseDealerCard(int index)
         {
-            if(Run.ApplyOffer(index)){Play(winSound);LastAction="apply";}
-            Render();
+            if(IsPresenting||!Run.CanApply(index))return;
+            var offer=Run.offers[index];
+            var kind=offer.kind;int target=offer.target;
+            Present(()=>Run.ApplyOffer(index),"apply",false,index,kind,target);
         }
         private void Workshop()
         {

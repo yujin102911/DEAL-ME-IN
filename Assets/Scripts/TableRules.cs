@@ -27,8 +27,8 @@ namespace NumberTable
         public int removePrice = 2;
         public int removeIncrease = 1;
         public int removeMaxPrice = 6;
-        // Numbers 3..33: difficulty-adjusted base points, before rarity and growth.
-        public int[] numberBaseScores = {260,240,220,200,180,160,150,140,140,140,140,140,150,160,170,180,190,200,210,240,250,260,270,280,300,320,340,360,380,390,400};
+        // Numbers 2..33: difficulty-adjusted base points, before rarity and growth.
+        public int[] numberBaseScores = {320,260,240,220,200,180,160,150,140,140,140,140,140,150,160,170,180,190,200,210,240,250,260,270,280,300,320,340,360,380,390,400};
         public int levelPrice = 6;
         public int levelIncrease = 4;
         public int unlockPrice = 8;
@@ -38,7 +38,7 @@ namespace NumberTable
         public float[] rarityMultipliers = { 1f, 1.2f, 1.4f, 1.8f, 2.2f };
         public float[] streakBonuses = { 0f, 0.1f, 0.2f, 0.35f, 0.5f, 0.7f };
         // Fixed by number: deck edits and number levels never change rarity.
-        public int[] rarity = { 5,4,4,3,3,2,2,2,1,1,1,1,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,5 };
+        public int[] rarity = { 5,5,4,4,3,3,2,2,2,1,1,1,1,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,5 };
     }
 
     [Serializable]
@@ -99,10 +99,10 @@ namespace NumberTable
             if(NeedsAceChoice) notice="버스트 보류 · 카드 아래에서 Ace를 1 또는 자동으로 바꿔주세요.";
             else ResolveBust();
         }
-        public int Stars(int n) { return n>=3 && n<=33 ? rules.rarity[n-3] : 1; }
+        public int Stars(int n) { return n>=2 && n<=33 ? rules.rarity[n-2] : 1; }
         public float LevelMult(int n) { return rules.levelMultipliers[Math.Max(0, Math.Min(levels[n]-1, rules.levelMultipliers.Length-1))]; }
         public float RarityMult(int n) { return rules.rarityMultipliers[Stars(n)-1]; }
-        public float BaseScore(int n) { return rules.numberBaseScores!=null && rules.numberBaseScores.Length==31 ? rules.numberBaseScores[n-3] : n*rules.scoreScale; }
+        public float BaseScore(int n) { return rules.numberBaseScores!=null && rules.numberBaseScores.Length==32 ? rules.numberBaseScores[n-2] : n*rules.scoreScale; }
         public float StreakMult { get { return 1f+rules.streakBonuses[Math.Min(streak,rules.streakBonuses.Length-1)]; } }
 
         public void Reset(int newSeed)
@@ -110,7 +110,7 @@ namespace NumberTable
             seed=newSeed; rng=new Random(seed); dealerRng=new Random(seed^0x5A173); nextId=0;
             deck.Clear(); shoe.Clear(); hand.Clear(); history.Clear();
             for(int rank=1;rank<=13;rank++) for(int s=0;s<2;s++) deck.Add(new PlayingCard(nextId++,rank,s*2+(rank%2)));
-            for(int n=0;n<34;n++) { levels[n]=1; unlocked[n]=n>=3 && n<=21; }
+            for(int n=0;n<34;n++) { levels[n]=1; unlocked[n]=n>=2 && n<=21; }
             stage=0; handsPlayed=stageScore=streak=removed=totalScore=totalBusts=totalHits=0;
             lastPoints=lastNumber=lastStreak=0; lastBust=false; coins=rules.initialCoins; selected=18;
             bonusHands=0; EnterWorkshop();
@@ -128,14 +128,14 @@ namespace NumberTable
             for(int high=flexible; high>=0; high--)
             {
                 int n=low+high*10;
-                if(n>=3 && n<=33 && safe[n]) return new HandValue(n,false,high);
+                if(n>=2 && n<=33 && safe[n]) return new HandValue(n,false,high);
             }
             return new HandValue(low,true);
         }
 
         public int Score(int n, int priorStreak=-1, int previewLevel=0)
         {
-            if(n<3 || n>33 || !unlocked[n]) return 0;
+            if(n<2 || n>33 || !unlocked[n]) return 0;
             float bonus=1f+rules.streakBonuses[Math.Min(priorStreak<0 ? streak : priorStreak, rules.streakBonuses.Length-1)];
             float level=previewLevel>0 ? rules.levelMultipliers[Math.Min(previewLevel,rules.levelMultipliers.Length)-1] : LevelMult(n);
             return (int)Math.Round(BaseScore(n)*level*RarityMult(n)*bonus,MidpointRounding.AwayFromZero);

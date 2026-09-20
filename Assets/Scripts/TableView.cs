@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -54,6 +54,7 @@ namespace NumberTable
         private void Update()
         {
             var k=Keyboard.current; if(k==null) return;
+            if(IsPresenting) { if(k.spaceKey.wasPressedThisFrame||k.escapeKey.wasPressedThisFrame) SkipPresentation(); return; }
             if(k.escapeKey.wasPressedThisFrame && (showHelp||showDeck||showLab)) { showHelp=showDeck=showLab=false; Render(); return; }
             if(showHelp||showDeck||showLab) return;
             if(Run.phase==RunPhase.Playing)
@@ -69,14 +70,14 @@ namespace NumberTable
             }
         }
 
-        public void NewRun() { Run.Reset(Environment.TickCount & 0x7fffffff); showHelp=showDeck=showLab=false; LastAction="new"; Play(clickSound); Render(); }
-        public void StartHand() { Run.LeaveWorkshop(); LastAction="deal"; Play(cardSound); Render(true); }
-        public void ActHit() { Run.Hit(); LastAction="hit"; Play(Run.lastBust?bustSound:cardSound); Render(true); }
-        public void ActStand() { Run.Stand(); LastAction="stand"; Play(winSound); Render(); }
-        public void Continue() { Run.Advance(); LastAction="continue"; Play(clickSound); Render(Run.phase==RunPhase.Playing); }
-        public void SelectNumber(int n) { Run.selected=n; Play(clickSound); Render(); }
-        
-        
+        public void NewRun() { CancelPresentation(); bestHand=0; Run.Reset(Environment.TickCount & 0x7fffffff); showHelp=showDeck=showLab=false; LastAction="new"; Play(clickSound); Render(); }
+        public void StartHand() { if(IsPresenting||Run.phase!=RunPhase.Workshop)return; Present(Run.LeaveWorkshop,"deal",true); }
+        public void ActHit() { if(IsPresenting||Run.phase!=RunPhase.Playing||Run.NeedsAceChoice)return; Present(Run.Hit,"hit",true); }
+        public void ActStand() { if(IsPresenting||Run.phase!=RunPhase.Playing||Run.NeedsAceChoice)return; Present(Run.Stand,"stand"); }
+        public void Continue() { if(IsPresenting)return; bool draw=Run.phase==RunPhase.Result&&Run.stageScore<Run.Target&&Run.HandsLeft>0&&Run.handsPlayed%Run.rules.shopEvery!=0; Present(Run.Advance,"continue",draw); }
+        public void SelectNumber(int n) { if(IsPresenting)return; Run.selected=n; Play(clickSound); Render(); }
+        private void ChooseAce(int index,int choice) { if(IsPresenting)return; Present(()=>Run.SetAce(index,choice),"ace"); }
+
         private void Play(AudioClip clip) { if(!muted && clip!=null) audioSource.PlayOneShot(clip); }
         public void Render(bool animate=false)
         {
@@ -95,6 +96,8 @@ namespace NumberTable
             if(showHelp) HelpModal();
             if(showDeck) DeckModal();
             if(showLab) LabModal();
+            var input=page.gameObject.AddComponent<CanvasGroup>(); input.interactable=!IsPresenting; input.blocksRaycasts=!IsPresenting;
+            if(effects!=null)effects.SetAsLastSibling();
         }
         private void Header()
         {
@@ -106,7 +109,7 @@ namespace NumberTable
             Button(page,"Sound",1321,37,73,39,muted?"음소거":"소리 켬",()=>{muted=!muted;Render();},panel,dim,12);
             Box(page,"Wallet",1410,30,156,54,gold);
             Text(page,"WalletCaption",1420,34,136,18,"보유 코인",11,bg,TextAnchor.MiddleCenter);
-            Text(page,"WalletValue",1420,51,136,29,Run.coins+" 코인",21,bg,TextAnchor.MiddleCenter);
+            Text(page,"WalletValue",1420,51,136,29,(visualCoins??Run.coins)+" 코인",21,bg,TextAnchor.MiddleCenter);
             Box(page,"HeaderRule",34,109,1532,1,line,false);
         }
         private void Sidebar()
@@ -117,10 +120,10 @@ namespace NumberTable
             Text(p,"RoomName",23,126,200,24,rooms[Run.stage],13,gold);
             Box(p,"rule",22,170,196,1,line,false);
             Text(p,"TargetCaption",22,194,194,24,"스테이지 점수",13,dim);
-            Text(p,"Score",21,229,205,49,Run.stageScore.ToString("N0"),35,ink,TextAnchor.MiddleLeft,true);
+            Text(p,"Score",21,229,205,49,(visualScore??Run.stageScore).ToString("N0"),35,ink,TextAnchor.MiddleLeft,true);
             Text(p,"Goal",22,281,196,23,"/ "+Run.Target.ToString("N0")+" 목표",14,dim);
             Box(p,"ProgressBg",22,322,196,6,line);
-            if(Run.stageScore>0) Box(p,"Progress",22,322,196*Mathf.Clamp01((float)Run.stageScore/Run.Target),6,mint);
+            Box(p,"Progress",22,322,196*Mathf.Clamp01((float)(visualScore??Run.stageScore)/Run.Target),6,mint);
             Text(p,"Hands",22,351,197,30,"남은 핸드    "+Run.HandsLeft+" / "+(Run.rules.handsPerStage+Run.bonusHands),15,ink);
             Text(p,"ShopTiming",22,389,197,25,"2핸드마다 덱 정비",12,dim);
             Box(p,"StreakBox",18,449,204,91,Hex("283733"));
@@ -135,9 +138,9 @@ namespace NumberTable
             var p=Box(page,"Number Collection",1158,134,408,704,panel);
             Text(p,"Title",22,21,364,34,"당신의 숫자",21,ink);
             Text(p,"Caption",22,65,364,24,"숫자를 눌러 점수 확인 · 성장은 딜러 카드로",12,dim);
-            for(int n=3;n<=33;n++)
+            for(int n=2;n<=33;n++)
             {
-                int number=n, i=n-3, col=i%5,row=i/5;
+                int number=n, i=n-2, col=i%5,row=i/5;
                 float x=22+col*74,y=101+row*55;
                 bool active=Run.selected==n, safe=Run.unlocked[n];
                 var b=Button(p,"Number "+n,x,y,68,49,"",()=>SelectNumber(number),active?gold:safe?Hex("263A3D"):Hex("1D2C2F"),ink);
@@ -182,7 +185,7 @@ namespace NumberTable
             else if(!Run.lastBust||!result)
             {
                 string tags=Run.hand.Count==2&&v.total==21?"NATURAL  ·  ":"";
-                Text(p,"Calculation",40,265,760,29,tags+"기본 "+Run.BaseScore(Mathf.Clamp(v.total,3,33))+" × 레벨 "+Run.LevelMult(Mathf.Clamp(v.total,3,33)).ToString("0.0")+" × 희귀도 "+Run.RarityMult(Mathf.Clamp(v.total,3,33)).ToString("0.0")+" × 연속 "+(result?(1+Run.rules.streakBonuses[Math.Min(Run.lastStreak,5)]):Run.StreakMult).ToString("0.00"),13,Hex("BBD0C6"),TextAnchor.MiddleCenter);
+                Text(p,"Calculation",40,265,760,29,tags+"기본 "+Run.BaseScore(Mathf.Clamp(v.total,2,33))+" × 레벨 "+Run.LevelMult(Mathf.Clamp(v.total,2,33)).ToString("0.0")+" × 희귀도 "+Run.RarityMult(Mathf.Clamp(v.total,2,33)).ToString("0.0")+" × 연속 "+(result?(1+Run.rules.streakBonuses[Math.Min(Run.lastStreak,5)]):Run.StreakMult).ToString("0.00"),13,Hex("BBD0C6"),TextAnchor.MiddleCenter);
             }
             else Text(p,"BustLoss",40,268,760,25,"버스트 · 연속 성공이 초기화됐어요",16,red,TextAnchor.MiddleCenter);
             int coinReward=result&&Run.lastBust?Run.rules.bustCoins:Run.rules.successCoins;
@@ -234,7 +237,7 @@ namespace NumberTable
                     for(int j=0;j<3;j++)
                     {
                         int choice=values[j]; float bw=(width-4)/3;
-                        Button(p,"Ace "+i+" "+choice,x+j*(bw+2),y+159,bw,29,labels[j],()=>{Run.SetAce(index,choice);Render();},c.aceChoice==choice?gold:Hex("314D44"),c.aceChoice==choice?bg:ink,10,Run.phase==RunPhase.Playing);
+                        Button(p,"Ace "+i+" "+choice,x+j*(bw+2),y+159,bw,29,labels[j],()=>ChooseAce(index,choice),c.aceChoice==choice?gold:Hex("314D44"),c.aceChoice==choice?bg:ink,10,Run.phase==RunPhase.Playing);
                     }
                 }
                 if(animate) { var motion=card.gameObject.AddComponent<CardArrival>(); motion.Setup((RectTransform)card,i*0.035f); }
@@ -319,7 +322,7 @@ namespace NumberTable
             var r=Box(parent,name,x,y,w,h,back); r.GetComponent<Image>().raycastTarget=true;
             var b=r.gameObject.AddComponent<Button>(); b.targetGraphic=r.GetComponent<Image>(); b.interactable=enabled;
             var colors=b.colors; colors.normalColor=Color.white; colors.highlightedColor=new Color(1.12f,1.12f,1.12f); colors.pressedColor=new Color(.8f,.85f,.82f); colors.disabledColor=new Color(.5f,.5f,.5f,.7f); b.colors=colors;
-            b.onClick.AddListener(()=>action()); var nav=b.navigation; nav.mode=Navigation.Mode.None; b.navigation=nav;
+            b.onClick.AddListener(()=>{if(!IsPresenting||name=="Skip FX")action();}); var nav=b.navigation; nav.mode=Navigation.Mode.None; b.navigation=nav;
             Text(r,"Label",4,2,w-8,h-4,value,size,enabled?fore:Hex("BAC5C0"),TextAnchor.MiddleCenter); return r;
         }
         private Sprite MakeRounded()
@@ -339,7 +342,7 @@ namespace NumberTable
             for(int i=0;i<len;i++) { float t=(float)i/rate,fade=1f-(float)i/len; data[i]=Mathf.Sin(t*hz*2*Mathf.PI)*fade*fade*.19f; }
             var clip=AudioClip.Create(title,len,1,rate,false); clip.SetData(data,0); return clip;
         }
-        private void OnDestroy() { if(Instance==this)Instance=null; }
+        private void OnDestroy() { CancelPresentation(); foreach(var sound in fxSounds)if(sound!=null)Destroy(sound); if(Instance==this)Instance=null; }
     }
 
     public class CardArrival : MonoBehaviour

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -32,7 +32,7 @@ namespace NumberTable
         {
             switch(o.kind)
             {
-                case OfferKind.Level:return o.target>=3&&o.target<=33&&unlocked[o.target]&&levels[o.target]<rules.levelMultipliers.Length;
+                case OfferKind.Level:return o.target>=2&&o.target<=33&&unlocked[o.target]&&levels[o.target]<rules.levelMultipliers.Length;
                 case OfferKind.Unlock:return o.target>=22&&o.target<=33&&!unlocked[o.target];
                 case OfferKind.Add:return o.target>=1&&o.target<=13&&deck.Count<rules.maxDeck&&RankCount(o.target)<(o.target==1?rules.aceLimit:rules.rankLimit);
                 case OfferKind.Remove:return o.target>=1&&o.target<=13&&deck.Count>rules.minDeck&&RankCount(o.target)>0;
@@ -48,7 +48,7 @@ namespace NumberTable
                 if(OfferUsable(o))for(int w=0;w<weight;w++)pool.Add(o);
             };
             // Per-target weights; no blank or unusable effects. Hand rewards are uncommon.
-            for(int n=3;n<=33;n++){add(OfferKind.Level,n,3);add(OfferKind.Unlock,n,2);}
+            for(int n=2;n<=33;n++){add(OfferKind.Level,n,3);add(OfferKind.Unlock,n,2);}
             for(int r=1;r<=13;r++){add(OfferKind.Add,r,3);add(OfferKind.Remove,r,3);}
             add(OfferKind.Coins,0,10);add(OfferKind.Hand,0,3);
             return pool[dealerRng.Next(pool.Count)];

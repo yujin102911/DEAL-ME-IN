@@ -128,7 +128,15 @@ public static class TableProjectSetup
         g.Reset(33);g.stage=rules.stageTargets.Length-1;g.phase=RunPhase.Result;g.handsPlayed=3;g.stageScore=g.Target;money=g.coins;
         int finalReward=g.StageReward;g.Advance();g.Advance();check(g.phase==RunPhase.Victory&&g.coins==money+finalReward,"Victory pays remaining-hand bonus once");
         g.Reset(33);g.phase=RunPhase.Result;g.handsPlayed=rules.handsPerStage;money=g.coins;g.Advance();check(g.phase==RunPhase.Defeat&&g.coins==money,"Defeat awards no clear coins");
-        check(rules.numberBaseScores!=null&&rules.numberBaseScores.Length==31&&rules.numberBaseScores.All(x=>x>0),"All31 numbers have positive base scores");
+        check(rules.numberBaseScores!=null&&rules.numberBaseScores.Length==32&&rules.numberBaseScores.All(x=>x>0),"All32 numbers have positive base scores");
+        g.Reset(33);
+        var lowAces=new System.Collections.Generic.List<PlayingCard>{new PlayingCard(901,1,0),new PlayingCard(902,1,1)};
+        lowAces[0].aceChoice=1;lowAces[1].aceChoice=1;
+        var two=TableRun.Evaluate(lowAces,g.unlocked);
+        check(two.total==2&&!two.bust,"Two low aces are a safe two");
+        check(g.Score(2)>g.Score(3)&&g.BaseScore(2)==320,"Two rewards more than three");
+        lowAces[0].aceChoice=0;
+        check(TableRun.Evaluate(lowAces,g.unlocked).total==12,"Auto ace still chooses highest safe total");
         g.Reset(33);g.levels[3]=5;g.streak=5;
         check(g.Score(3)==2431,"Max3 score uses revised base points");
         g.unlocked[33]=true;g.levels[33]=5;

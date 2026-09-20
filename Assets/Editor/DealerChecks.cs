@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using NumberTable;
 using UnityEngine;
@@ -49,7 +49,7 @@ public static class DealerChecks
         g.offers[0].revealed=false;g.coins=1;g.RevealOffer(0);check(g.OfferUsable(g.offers[0]),"No removal offered below deck minimum");
         for(int seed=0;seed<100;seed++)
         {
-            g.Reset(seed);for(int n=3;n<=33;n++){g.unlocked[n]=true;g.levels[n]=5;}
+            g.Reset(seed);for(int n=2;n<=33;n++){g.unlocked[n]=true;g.levels[n]=5;}
             g.EnterWorkshop();check(g.offers.All(o=>g.OfferUsable(o)&&o.kind!=OfferKind.Level&&o.kind!=OfferKind.Unlock),"No max-level or unlocked blanks seed"+seed);
         }
         var a=new TableRun(rules);var b=new TableRun(rules);a.Reset(77);b.Reset(77);
