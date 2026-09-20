@@ -104,3 +104,24 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Local editors and operating system files
+/.vscode/
+/.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local secrets and MCP/client state
+.env
+.env.*
+!.env.example
+/.mcp.json
+/.codex/
+/.mcp-unity/
+__pycache__/
+*.pyc
+
+# Original workstation-specific MCP bootstrap (configure MCP per machine)
+/Assets/Editor/UnityMcpAutoConnect.cs
+/Assets/Editor/UnityMcpAutoConnect.cs.meta
