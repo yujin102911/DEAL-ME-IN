@@ -21,7 +21,10 @@ namespace NumberTable
         private void CancelPresentation()
         {
             if(presentation!=null)StopCoroutine(presentation);
+            if(audioSource!=null)audioSource.Stop();
+            RestoreImpact();
             presentation=null;IsPresenting=false;fastForward=false;visualCoins=visualScore=null;
+            if(page!=null){var input=page.GetComponent<CanvasGroup>();if(input!=null){input.interactable=true;input.blocksRaycasts=true;}}
             if(effects!=null){effects.gameObject.SetActive(false);Destroy(effects.gameObject);effects=null;}
         }
         private void Present(Action action,string label,bool draw=false,int offerIndex=-1,OfferKind kind=OfferKind.Level,int target=0)
@@ -136,8 +139,7 @@ namespace NumberTable
                 Write("Playing Table/Score Reward/Amount","0점");
                 if(Run.lastBust)
                 {
-                    Play(bustSound);Write("Playing Table/Score Reward/Amount",Run.lastPoints.ToString("N0")+"점");
-                    yield return Beat(.2f);
+                    yield return BustImpact(beforeScore);
                 }
                 else
                 {
@@ -149,7 +151,7 @@ namespace NumberTable
                     {
                         Write("Playing Table/Calculation",labels[i]);Note(i);
                         float from=i==0?0:values[i-1],to=values[i];
-                        yield return Beat(.16f,t=>Write("Playing Table/Score Reward/Amount","+"+Mathf.RoundToInt(Mathf.Lerp(from,to,t)).ToString("N0")+"점"));
+                        yield return ScoreStep(from,to,labels[i],i);
                         if(i==1&&Run.levels[n]>1)yield return Pulse(page.Find("Number Collection/Number "+n),.18f);
                     }
                     Write("Playing Table/Score Reward/Amount","+"+Run.lastPoints.ToString("N0")+"점");
