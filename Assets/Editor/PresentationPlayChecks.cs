@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -85,7 +85,57 @@ public static class PresentationPlayChecks
         Check(v.Run.lastNumber==2&&!v.Run.lastBust&&v.Run.coins==startingCoins+v.Run.rules.successCoins,"Two scores without early clear payout");
         int clearCoins=v.Run.StageReward;v.Continue();yield return Finish(v);
         Check(v.Run.coins==startingCoins+v.Run.rules.successCoins+clearCoins,"Goal animation leaves clear payout exactly once");
+        yield return ImpactChecks(v);
         Hand(v,10,8);v.ActStand();v.NewRun();yield return null;
         Check(!v.IsPresenting&&v.Run.history.Count==0&&v.Run.coins==v.Run.rules.initialCoins,"New run cancels animation safely");
+    }
+    private static IEnumerator ImpactChecks(TableView v)
+    {
+        // Observe real, unskipped verdicts, then interrupt at the impact itself.
+        Hand(v,10,10);v.Run.streak=4;v.Run.stageScore=500;
+        v.Run.shoe.Clear();v.Run.shoe.Add(new PlayingCard(999,10,0));
+        int expected=Math.Max(0,500-v.Run.Penalty);
+        v.ActHit();bool sawBust=false,sawBroken=false,captured=false;float visible=0;
+        float end=Time.realtimeSinceStartup+8;
+        while(v.IsPresenting&&Time.realtimeSinceStartup<end)
+        {
+            var texts=v.GetComponentsInChildren<UnityEngine.UI.Text>();
+            bool stamp=texts.Any(t=>t.name=="Bust Stamp"&&t.text=="BUST!!");
+            sawBust|=stamp;sawBroken|=texts.Any(t=>t.name=="Streak Broken"&&t.text.Contains("4"));
+            if(stamp){visible+=Time.unscaledDeltaTime;if(visible>.18f&&!captured){Capture("bust.png");captured=true;}}
+            yield return null;
+        }
+        Check(!v.IsPresenting&&sawBust&&sawBroken,"Full bust verdict and streak break shown");
+        Check(v.Run.stageScore==expected&&v.Run.streak==0&&v.Run.coins==21,"Bust effects preserve exact penalty and currency");
+        Check(!v.GetComponentsInChildren<UnityEngine.UI.Text>().Any(t=>t.name=="Bust Stamp"),"Bust visuals cleaned up");
+
+        foreach(bool cancel in new[]{false,true})
+        {
+            Hand(v,10,10);v.Run.shoe.Clear();v.Run.shoe.Add(new PlayingCard(999,10,0));v.ActHit();
+            end=Time.realtimeSinceStartup+4;
+            while(!v.GetComponentsInChildren<UnityEngine.UI.Text>().Any(t=>t.name=="Bust Stamp")&&Time.realtimeSinceStartup<end)yield return null;
+            Check(v.IsPresenting,"Bust impact reached before interrupt");
+            if(cancel){v.NewRun();yield return null;Check(!v.IsPresenting&&v.Run.history.Count==0,"New run cancels active bust");}
+            else{yield return Finish(v);Check(v.Run.phase==RunPhase.Result&&v.Run.totalBusts==1,"Skipping active bust resolves exactly once");}
+        }
+        Hand(v,1,1);v.Run.SetAce(0,1);v.Run.SetAce(1,1);v.Run.levels[2]=10;v.Render();
+        int expectedPoints=v.Run.Score(2);v.ActStand();end=Time.realtimeSinceStartup+12;
+        bool jackpot=false;captured=false;visible=0;
+        while(v.IsPresenting&&Time.realtimeSinceStartup<end)
+        {
+            var texts=v.GetComponentsInChildren<UnityEngine.UI.Text>();
+            bool stamp=texts.Any(t=>t.name=="Score Hype"&&t.text=="JACKPOT!!!");jackpot|=stamp;
+            if(stamp){visible+=Time.unscaledDeltaTime;if(visible>.2f&&!captured){Capture("jackpot.png");captured=true;}}
+            yield return null;
+        }
+        Check(!v.IsPresenting&&jackpot,"Stage-sized hand triggers jackpot tier");
+        Check(v.Run.stageScore==100+expectedPoints&&v.Run.coins==24,"Jackpot does not inflate rewards");
+    }
+    private static void Capture(string name)
+    {
+        string directory=Environment.GetEnvironmentVariable("DEALMEIN_CAPTURE_DIR");
+        if(string.IsNullOrEmpty(directory))return;
+        System.IO.Directory.CreateDirectory(directory);
+        ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(directory,name));
     }
 }
