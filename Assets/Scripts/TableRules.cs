@@ -62,7 +62,7 @@ namespace NumberTable
         public HandValue(int n, bool b, int a=0) { total=n; bust=b; highAutomaticAces=a; }
     }
 
-    public enum RunPhase { Welcome, Workshop, Playing, Result, StageClear, Victory, Defeat }
+    public enum RunPhase { Welcome, Workshop, Playing, Result, StageClear, Victory, Defeat, Stamp }
 
     public partial class TableRun
     {
@@ -107,7 +107,7 @@ namespace NumberTable
 
         public void Reset(int newSeed)
         {
-            seed=newSeed; rng=new Random(seed); dealerRng=new Random(seed^0x5A173); nextId=0;
+            seed=newSeed; rng=new Random(seed); dealerRng=new Random(seed^0x5A173); stampRng=new Random(seed^0x731B); nextId=0;
             deck.Clear(); shoe.Clear(); hand.Clear(); history.Clear();
             for(int rank=1;rank<=13;rank++) for(int s=0;s<2;s++) deck.Add(new PlayingCard(nextId++,rank,s*2+(rank%2)));
             for(int n=0;n<34;n++) { levels[n]=1; unlocked[n]=n>=2 && n<=21; }

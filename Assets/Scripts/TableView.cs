@@ -75,7 +75,7 @@ namespace NumberTable
         public void ActHit() { if(IsPresenting||Run.phase!=RunPhase.Playing||Run.NeedsAceChoice)return; Present(Run.Hit,"hit",true); }
         public void ActStand() { if(IsPresenting||Run.phase!=RunPhase.Playing||Run.NeedsAceChoice)return; Present(Run.Stand,"stand"); }
         public void Continue() { if(IsPresenting)return; bool draw=Run.phase==RunPhase.Result&&Run.stageScore<Run.Target&&Run.HandsLeft>0&&Run.handsPlayed%Run.rules.shopEvery!=0; Present(Run.Advance,"continue",draw); }
-        public void SelectNumber(int n) { if(IsPresenting)return; Run.selected=n; Play(clickSound); Render(); }
+        public void SelectNumber(int n) { if(IsPresenting)return; Run.selected=n; if(Run.phase==RunPhase.Stamp)stampAnchor=n; Play(clickSound); Render(); }
         private void ChooseAce(int index,int choice) { if(IsPresenting)return; Present(()=>Run.SetAce(index,choice),"ace"); }
 
         private void Play(AudioClip clip) { if(!muted && clip!=null) audioSource.PlayOneShot(clip); }
@@ -86,8 +86,9 @@ namespace NumberTable
             var pageRect=(RectTransform)page;
             pageRect.anchorMin=pageRect.anchorMax=pageRect.pivot=new Vector2(.5f,.5f);
             pageRect.anchoredPosition=Vector2.zero;
-            Header(); Sidebar(); Numbers();
+            EnsureStampSelection();Header(); Sidebar(); Numbers();
             if(Run.phase==RunPhase.Welcome) Welcome();
+            else if(Run.phase==RunPhase.Stamp) StampWorkshop();
             else if(Run.phase==RunPhase.Workshop) Workshop();
             else if(Run.phase==RunPhase.StageClear||Run.phase==RunPhase.Victory||Run.phase==RunPhase.Defeat) EndPanel();
             else Table(animate);
@@ -137,7 +138,9 @@ namespace NumberTable
         {
             var p=Box(page,"Number Collection",1158,134,408,704,panel);
             Text(p,"Title",22,21,364,34,"당신의 숫자",21,ink);
-            Text(p,"Caption",22,65,364,24,"숫자를 눌러 점수 확인 · 성장은 딜러 카드로",12,dim);
+            Text(p,"Caption",22,65,364,24,Run.phase==RunPhase.Stamp?"숫자를 눌러 블록 배치 · 회전 없음":"숫자를 눌러 점수 확인 · 블록으로 성장",12,dim);
+            var preview=Run.phase==RunPhase.Stamp?Run.StampCells(selectedStamp,stampAnchor):new int[0];
+            bool stampValid=Run.phase==RunPhase.Stamp&&Run.CanStamp(selectedStamp,stampAnchor);
             for(int n=2;n<=33;n++)
             {
                 int number=n, i=n-2, col=i%5,row=i/5;
@@ -146,6 +149,15 @@ namespace NumberTable
                 var b=Button(p,"Number "+n,x,y,68,49,"",()=>SelectNumber(number),active?gold:safe?Hex("263A3D"):Hex("1D2C2F"),ink);
                 Text(b,"Value",3,1,62,28,n.ToString(),22,active?bg:safe?ink:Hex("677A7D"),TextAnchor.MiddleCenter,true);
                 Text(b,"Level",3,30,62,17,safe?"LV "+Run.levels[n]:"LOCKED",9,active?bg:safe?mint:Hex("677A7D"),TextAnchor.MiddleCenter);
+                int cell=System.Array.IndexOf(preview,n);
+                if(cell>=0)
+                {
+                    var color=stampValid?(cell==selectedStamp.keyCell?gold:mint):red;
+                    Box(b,"Stamp Edge Top",0,0,68,3,color,false);Box(b,"Stamp Edge Bottom",0,46,68,3,color,false);
+                    Box(b,"Stamp Edge Left",0,0,3,49,color,false);Box(b,"Stamp Edge Right",65,0,3,49,color,false);
+                    string mark=cell==selectedStamp.keyCell?"열쇠":safe&&Run.levels[n]<Run.rules.levelMultipliers.Length?"+1":"—";
+                    Text(b,"Stamp Mark",37,2,29,18,mark,10,color,TextAnchor.MiddleCenter);
+                }
             }
             int selected=Run.selected; bool opened=Run.unlocked[selected];
             Box(p,"DetailRule",22,493,364,1,line,false);
@@ -153,7 +165,7 @@ namespace NumberTable
             Text(p,"Stars",112,503,250,23,new string('★',Run.Stars(selected))+new string('☆',5-Run.Stars(selected)),17,gold);
             Text(p,"Multiplier",112,531,271,22,"기본 "+Run.BaseScore(selected)+" · Lv."+Run.levels[selected]+" ×"+Run.LevelMult(selected).ToString("0.0")+" · 희귀 ×"+Run.RarityMult(selected).ToString("0.0"),11,dim);
             Text(p,"ValuePreview",22,580,364,35,opened?"합계 "+selected+"로 멈추면  "+Run.Score(selected).ToString("N0")+"점":"이 합계는 아직 버스트입니다",19,opened?mint:dim);
-            Text(p,"ShopHint",22,633,364,55,"딜러의 성장·해금 카드를 뽑아 적용하세요.\n원하는 숫자를 바로 구매할 수는 없어요.",12,dim);
+            Text(p,"ShopHint",22,633,364,55,"성장 블록: 열린 칸 레벨 +1\n열쇠 블록: 열쇠 칸만 해금 · 주변 성장",12,dim);
         }
 
         private void Welcome()
@@ -269,8 +281,8 @@ namespace NumberTable
         {
             var p=Modal("HOW TO PLAY / 원하는 숫자를 만드는 게임");
             Text(p,"Rules",40,120,995,467,
-                "01    딜러의 카드 중 직접 고르기\n        5장 공개 중 2장 무료 선택. 선택 즉시 적용됩니다. 추가 선택은 2·3·4…코인.\n        뒷면 추가 공개는 별도로 1·2·3…코인. 미선택 카드는 소멸하고 다음 정비에 초기화됩니다.\n\n"+
-                "02    두 장을 받고 HIT / STAND\n        HIT은 한 장 추가, STAND는 지금 합계로 점수 획득. Ace를 바꿔도 안전하지 않으면 BUST.\n\n"+
+                "01    블록으로 숫자를 키우고, 딜러에게 덱 정비\n        고정 모양 블록 1개를 찍은 뒤 카드 2장 무료 선택. 추가 선택은 2·3·4…코인.\n        뒷면 추가 공개는 별도로 1·2·3…코인. 미선택 카드는 소멸하고 다음 정비에 초기화됩니다.\n\n"+
+                "02    성장 블록은 열린 칸 +1 · 열쇠 칸은 잠긴 숫자 하나 해금\n        블록은 회전 없이 배치하며, 미리보기 후 확정합니다. 두 장을 받고 HIT / STAND\n        HIT은 한 장 추가, STAND는 지금 합계로 점수 획득. Ace를 바꿔도 안전하지 않으면 BUST.\n\n"+
                 "03    Ace는 당신이 결정\n        카드 아래 자동 / 1 / 11로 선택합니다. 자동은 해금된 가장 높은 안전 합계입니다.\n        HIT 후 Ace를 바꾸면 살릴 수 있을 때는 버스트를 보류합니다. 값을 고른 뒤 계속하세요.\n\n"+
                 "04    점수 = 숫자별 기본 점수 × 레벨 × 고정 희귀도 × 연속 성공\n        만들기 힘든 낮은 합계에도 높은 기본 점수를 줍니다. 기본 점수는 오른쪽에서 확인하세요.\n\n"+
                 "05    기본 8핸드 안에 목표 달성, 총 5개 스테이지\n        2핸드마다 정비. 핸드 +1은 이번 스테이지에만 적용됩니다. 정비 후 전체 덱을 섞습니다.",16,ink);

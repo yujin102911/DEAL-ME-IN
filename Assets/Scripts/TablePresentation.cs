@@ -113,6 +113,7 @@ namespace NumberTable
                 Destroy(back.gameObject);
             }
             action();LastAction=label;Render();
+            if(label=="stamp")yield return StampImpact();
             if(Run.phase==RunPhase.Result&&beforePhase!=RunPhase.Result)
             {
                 Write("Playing Table/Score Reward/Amount","정산 준비");

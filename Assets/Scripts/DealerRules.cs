@@ -27,6 +27,7 @@ namespace NumberTable
             for(int i=0;i<rules.dealerSlots;i++)offers.Add(GenerateOffer());
             for(int i=0;i<Math.Min(5,offers.Count);i++)offers[i].revealed=true;
             notice="딜러: 다섯 장 중 두 장은 내 선물. 더 보고 싶으면 뒷면을 골라봐.";
+            BeginStamps();
         }
         public bool OfferUsable(DealerOffer o)
         {
@@ -48,7 +49,7 @@ namespace NumberTable
                 if(OfferUsable(o))for(int w=0;w<weight;w++)pool.Add(o);
             };
             // Per-target weights; no blank or unusable effects. Hand rewards are uncommon.
-            for(int n=2;n<=33;n++){add(OfferKind.Level,n,3);add(OfferKind.Unlock,n,2);}
+            // Number growth and unlocks now belong to the stamp board.
             for(int r=1;r<=13;r++){add(OfferKind.Add,r,3);add(OfferKind.Remove,r,3);}
             add(OfferKind.Coins,0,10);add(OfferKind.Hand,0,3);
             return pool[dealerRng.Next(pool.Count)];
