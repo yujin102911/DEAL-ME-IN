@@ -13,6 +13,7 @@ public static class PresentationChecks
     {
         Debug.Log(DealerChecks.Run());
         Debug.Log(TableProjectSetup.RunCoreChecks());
+        Debug.Log(StampChecks.Run());
         SessionState.SetBool(BatchKey,true);
         EditorSceneManager.OpenScene("Assets/Scenes/NumberTable.unity");
         EditorApplication.isPlaying=true;
@@ -42,6 +43,7 @@ public static class PresentationChecks
         try {
             Debug.Log(DealerChecks.Run());
             Debug.Log(TableProjectSetup.RunCoreChecks());
+            Debug.Log(StampChecks.Run());
             Debug.Log("PRESENTATION_COMPILE_AND_RULES_PASS");
             EditorApplication.Exit(0);
         } catch(System.Exception e) {Debug.LogException(e);EditorApplication.Exit(1);}

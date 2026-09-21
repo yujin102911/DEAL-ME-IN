@@ -14,8 +14,11 @@ Windows에서 검증했습니다. 한글 UI는 OS 글꼴(맑은 고딕)을 사�
 
 ## 현재 게임
 
+- 숫자판 강화: 고정 모양 블록 3개 중 1개를 골라 찍습니다. 회전은 없습니다. 열린 칸은 레벨 +1, 열쇠 표시 칸은 잠긴 숫자 하나를 해금합니다.
+- 잠긴 숫자가 남으면 배치 가능한 열쇠 블록을 최소 1개 보장합니다. 숫자판 강화 다음 카드 정비로 이어집니다. 자세한 규칙은 `Docs/TetrominoUpgrades.md`를 참고하세요.
+
 - 5개 스테이지, 기본 스테이지당 8핸드. HIT / STAND 및 Ace 1·11·자동 선택.
-- 3~21은 처음부터 안전하며, 22~33은 개별 해금합니다.
+- 2~21은 처음부터 안전하며, 22~33은 열쇠 블록으로 개별 해금합니다.
 - 딜러 정비: 12장 중 5장 공개, 2장 무료 선택. 선택 즉시 효과 적용.
 - 추가 공개 비용 1·2·3…코인, 추가 선택 비용 2·3·4…코인. 두 가격은 독립적으로 증가합니다.
 - 미선택 카드는 정비 종료 시 소멸. 다음 정비에서 무료 횟수와 가격이 초기화됩니다.
@@ -24,6 +27,7 @@ Windows에서 검증했습니다. 한글 UI는 OS 글꼴(맑은 고딕)을 사�
 
 - `Assets/Scripts/TableRules.cs`: 플레이 및 점수 규칙
 - `Assets/Scripts/DealerRules.cs`: 딜러 후보 생성과 선택 비용
+- `Assets/Scripts/StampRules.cs`, `StampView.cs`: 블록 강화 규칙과 UI
 - `Assets/Scripts/TableView.cs`, `DealerView.cs`: 화면
 - `Assets/Resources/TableBalance.json`: 밸런스 수치
 - Unity 메뉴 `Tools > Number Table > Check Dealer`: 딜러 규칙 검사

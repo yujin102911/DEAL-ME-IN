@@ -14,7 +14,7 @@ namespace NumberTable
             string[] names={"STABLE  ·  15~18 분산","FOCUS  ·  18 집중","EXTREME  ·  33 + Ace"};
             for(int mode=0;mode<3;mode++)
             {
-                var g=new TableRun(rules); g.Reset(3301); g.coins=60;
+                var g=new TableRun(rules); g.Reset(3301); g.SkipStamp(); g.coins=60;
                 if(mode==0)
                 {
                     foreach(int n in new[]{15,16,17,18,17,18})g.Upgrade(n);

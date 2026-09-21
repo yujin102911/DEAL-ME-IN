@@ -33,16 +33,24 @@ public static class PresentationPlayChecks
     }
     private static void Hand(TableView v,params int[] ranks)
     {
-        v.NewRun();v.Run.phase=RunPhase.Playing;v.Run.handsPlayed=1;v.Run.hand.Clear();
+        v.NewRun();v.Run.SkipStamp();v.Run.phase=RunPhase.Playing;v.Run.handsPlayed=1;v.Run.hand.Clear();
         for(int i=0;i<ranks.Length;i++)v.Run.hand.Add(new PlayingCard(900+i,ranks[i],0));
         v.Run.coins=20;v.Run.stageScore=100;v.Render();
     }
     private static IEnumerator Tests()
     {
         var v=TableView.Instance;
+        v.NewRun();v.Run.stamps.Clear();v.Run.stamps.Add(new StampOffer(2,3));v.Render();
+        v.SelectStamp(0);v.SelectNumber(17);int coinsBeforeStamp=v.Run.coins;
+        Check(v.GetComponentsInChildren<UnityEngine.UI.Text>().Any(t=>t.name=="Stamp Mark"&&t.text=="열쇠"),"Key cell preview visible");
+        Check(!v.Run.unlocked[23]&&v.Run.levels[18]==1,"UI preview does not change progression");
+        v.ConfirmStamp();v.ConfirmStamp();yield return Finish(v);
+        Check(v.Run.phase==RunPhase.Workshop&&v.Run.unlocked[23]&&v.Run.levels[18]==2,"UI confirm applies stamp once then opens dealer");
+        Check(v.Run.coins==coinsBeforeStamp,"Stamp is free");
+        v.NewRun();v.SkipStampChoice();Check(v.Run.phase==RunPhase.Workshop&&v.Run.levels[18]==1,"UI skip opens dealer without growth");
         for(int seed=0;seed<8;seed++)
         {
-            v.NewRun();v.Run.Reset(seed);v.Render();var expected=new TableRun(v.Run.rules);expected.Reset(seed);expected.LeaveWorkshop();
+            v.NewRun();v.Run.SkipStamp();v.Run.Reset(seed);v.Run.SkipStamp();v.Render();var expected=new TableRun(v.Run.rules);expected.Reset(seed);expected.SkipStamp();expected.LeaveWorkshop();
             v.StartHand();Check(v.IsPresenting&&v.Run.hand.Count==0,"Card draw delayed behind neutral back");
             v.ActHit();v.StartHand();Check(v.Run.hand.Count==0,"Repeated input blocked during draw");
             yield return Finish(v);
@@ -61,7 +69,7 @@ public static class PresentationPlayChecks
         Check(v.Run.phase==RunPhase.StageClear&&v.Run.coins==20+reward,"Clear base and remaining hand bonus paid once");
         foreach(OfferKind kind in Enum.GetValues(typeof(OfferKind)))
         {
-            v.NewRun();int target=kind==OfferKind.Level?18:kind==OfferKind.Unlock?33:1;
+            v.NewRun();v.Run.SkipStamp();int target=kind==OfferKind.Level?18:kind==OfferKind.Unlock?33:1;
             v.Run.offers.Clear();v.Run.offers.Add(new DealerOffer(kind,target){revealed=true});int before=v.Run.coins;
             v.UseDealerCard(0);v.UseDealerCard(0);yield return Finish(v);
             Check(v.Run.offers[0].applied&&v.Run.dealerPicks==1,"Dealer effect selected only once "+kind);
@@ -86,7 +94,7 @@ public static class PresentationPlayChecks
         int clearCoins=v.Run.StageReward;v.Continue();yield return Finish(v);
         Check(v.Run.coins==startingCoins+v.Run.rules.successCoins+clearCoins,"Goal animation leaves clear payout exactly once");
         yield return ImpactChecks(v);
-        Hand(v,10,8);v.ActStand();v.NewRun();yield return null;
+        Hand(v,10,8);v.ActStand();v.NewRun();v.Run.SkipStamp();yield return null;
         Check(!v.IsPresenting&&v.Run.history.Count==0&&v.Run.coins==v.Run.rules.initialCoins,"New run cancels animation safely");
     }
     private static IEnumerator ImpactChecks(TableView v)
@@ -115,7 +123,7 @@ public static class PresentationPlayChecks
             end=Time.realtimeSinceStartup+4;
             while(!v.GetComponentsInChildren<UnityEngine.UI.Text>().Any(t=>t.name=="Bust Stamp")&&Time.realtimeSinceStartup<end)yield return null;
             Check(v.IsPresenting,"Bust impact reached before interrupt");
-            if(cancel){v.NewRun();yield return null;Check(!v.IsPresenting&&v.Run.history.Count==0,"New run cancels active bust");}
+            if(cancel){v.NewRun();v.Run.SkipStamp();yield return null;Check(!v.IsPresenting&&v.Run.history.Count==0,"New run cancels active bust");}
             else{yield return Finish(v);Check(v.Run.phase==RunPhase.Result&&v.Run.totalBusts==1,"Skipping active bust resolves exactly once");}
         }
         Hand(v,1,1);v.Run.SetAce(0,1);v.Run.SetAce(1,1);v.Run.levels[2]=10;v.Render();
